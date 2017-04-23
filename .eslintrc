@@ -1,9 +1,22 @@
 {
-  "parserOptions": {
-    "ecmaVersion": 6,
-    "sourceType": "module"
-    "ecmaFeatures": {
-      "impliedStrict": true
-    }
+  "extends": "eslint:recommended",
+  "env": {
+    "browser": true
+  },
+  "globals": {
+    "Player": true,
+    "PLANET": true,
+    "Controls": true,
+    "PLAYER": true,
+    "PLAYER_BULLET": true,
+    "BULLET": true,
+    "ENEMY": true,
+    "Enemy": true,
+    "Planet": true,
+    "Bullet": true,
+    "p2": true
+  },
+  "rules": {
+    "no-console": ["off"]
   }
 }
