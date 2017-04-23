@@ -56,9 +56,7 @@ Planet.prototype.getY = function() {
 };
 
 Planet.prototype.draw = function(gfx) {
-  gfx.fillStyle = '#00aa33';
   gfx.strokeStyle = '#00aa33';
-  gfx.lineWidth = 0.05;
   gfx.beginPath();
   for (var i = 0; i < this.body.shapes.length; i++) {
     var shape = this.body.shapes[i];
@@ -83,9 +81,11 @@ Planet.prototype.onHit = function(bullet) {
     if (Math.abs(dTheta) > craterWidth && Math.abs(dTheta) < 2 * Math.PI - craterWidth) {
       continue;
     }
-    var dHeight = 0.4 * Math.cos(dTheta / craterWidth * Math.PI / 2);
-    if (this.heights[i] > dHeight + 0.5) {
+    var dHeight = 0.9 * Math.cos(dTheta / craterWidth * Math.PI / 2);
+    if (this.heights[i] > dHeight + 0.001) {
       this.heights[i] -= dHeight;
+    } else {
+      this.heights[i] = 0.001;
     }
   }
 
@@ -96,8 +96,8 @@ Planet.prototype.onHit = function(bullet) {
     var height = this.heights[hi];
     newHeights[hi] = left * 0.25 + height * 0.5 + right * 0.25;
   }
-  this.heights[this.heights.length - 1] = this.heights[0];
   this.heights = newHeights;
+  this.heights[this.heights.length - 1] = this.heights[0];
 
   this.generateSurface();
 };

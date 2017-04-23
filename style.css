@@ -1,8 +1,58 @@
 body {
   margin: 0;
   padding: 0;
+  color: #00ff33;
+  font-family: sans-serif;
+}
+
+* {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #small-canvas {
   display: block;
+}
+
+#ui-container.important {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+#ui-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0);
+  transition: background 1s;
+}
+
+#intro-text {
+  line-height: 1.4em;
+}
+
+#start-button {
+  cursor: pointer;
+  background: black;
+  border: 1px solid #00ff33;
+  color: #00ff33;
+  width: 100%;
+  height: 40px;
+  margin-top: 0.4em;
+}
+
+#lose-text {
+  display: none;
+}
+
+#score-text {
+  position: absolute;
+  top: 10px;
+  left: 10px;
 }

@@ -11,6 +11,15 @@ function SmallGame() {
   this.canvas = document.getElementById('small-canvas');
   this.canvas.width = this.width = 320;
   this.canvas.height = this.height = 320 * 16 / 9;
+  this.lost = false;
+  this.uiContainer = document.getElementById('ui-container');
+  this.loseText = document.getElementById('lose-text');
+  this.scoreText = document.getElementById('score-text');
+  this.introText = document.getElementById('intro-text');
+  this.start = this.start.bind(this);
+  this.startButton = document.getElementById('start-button');
+  this.startButton.addEventListener('click', this.start);
+  this.startButton.addEventListener('touchend', this.start);
 
   this.gfx = this.canvas.getContext('2d');
   this.world = new p2.World({
@@ -29,10 +38,9 @@ function SmallGame() {
   this.player = new Player(this, this.world, this.planet);
 
   this.bullets = [];
-  this.enemies = new Array(9);
-  for (var i = 0; i < this.enemies.length; i++) {
-    this.enemies[i] = new Enemy(this, this.world, 10, i / this.enemies.length * 2 * Math.PI);
-  }
+  this.wave = 1;
+  this.score = 0;
+  this.enemies = [];
 
   this.lastUpdate = Date.now();
   this.update = this.update.bind(this);
@@ -47,7 +55,7 @@ function SmallGame() {
     };
   }
 
- this.controls = new Controls(this.player);
+  this.controls = new Controls(this.player);
 
   this.onResize = this.onResize.bind(this);
   window.addEventListener('resize', this.onResize);
@@ -56,6 +64,17 @@ function SmallGame() {
   window.requestAnimationFrame(this.update);
 }
 
+SmallGame.prototype.spawnEnemies = function() {
+  for (var i = 0; i < this.wave; i++) {
+    var height = 20;
+    var theta = i / this.wave * 2 * Math.PI;
+    if (this.wave > 9) {
+      height = 20 + Math.floor(i / 9);
+      theta = (i % 9) / 9 * 2 * Math.PI;
+    }
+    this.enemies.push(new Enemy(this, this.world, height, theta));
+  }
+};
 
 SmallGame.prototype.update = function() {
   var dt = Date.now() - this.lastUpdate;
@@ -91,14 +110,47 @@ SmallGame.prototype.update = function() {
 
   this.draw();
 
+  if (this.planet.mass / this.planet.initialMass < 0.08) {
+    this.lose();
+  }
+
   this.lastUpdate = Date.now();
   window.requestAnimationFrame(this.update);
+};
+
+SmallGame.prototype.start = function() {
+  this.introText.style.display = 'none';
+  this.startButton.style.display = 'none';
+  this.uiContainer.classList.remove('important');
+  this.spawnEnemies();
+};
+
+SmallGame.prototype.lose = function() {
+  if (this.lost) {
+    return;
+  }
+  this.lost = true;
+  this.loseText.style.display = 'block';
+  this.loseText.innerHTML += 'score: ' + this.score;
+  this.scoreText.style.display = 'none';
+  this.uiContainer.classList.add('important');
 };
 
 SmallGame.prototype.draw = function() {
   this.gfx.save();
   this.gfx.fillStyle = 'black';
   this.gfx.fillRect(0, 0, this.width, this.height);
+
+  // this.gfx.strokeStyle = '#00aa33';
+  // this.gfx.strokeRect(10, 10, 200, 40);
+  // var planetHealth = this.planet.mass / this.planet.initialMass * 200;
+  // this.gfx.beginPath();
+  // for (var tick = 5; tick < planetHealth; tick += 5) {
+  //   this.gfx.moveTo(10 + tick, 10);
+  //   this.gfx.lineTo(10 + tick, 50);
+  // }
+  // this.gfx.stroke();
+
   this.gfx.translate(this.width / 2, this.height * 9 / 10);
   this.scale = 60;
   this.gfx.scale(this.scale, this.scale);
@@ -119,6 +171,7 @@ SmallGame.prototype.draw = function() {
     this.gfx.stroke();
   }
 
+  this.gfx.lineWidth = 0.05;
   this.planet.draw(this.gfx);
   this.player.draw(this.gfx);
   for (var i = 0; i < this.enemies.length; i++) {
@@ -132,7 +185,25 @@ SmallGame.prototype.draw = function() {
     var effect = this.effects[ei];
     effect.draw(this.gfx);
   }
+
   this.gfx.restore();
+
+  if (!this.lost) {
+    this.gfx.save();
+    this.gfx.translate(this.width * 9.4 / 10, this.height / 10);
+
+    this.gfx.rotate(Math.PI);
+    this.gfx.scale(this.scale / 10, this.scale / 10);
+
+    this.gfx.lineWidth = 0.5;
+    this.planet.draw(this.gfx);
+    this.player.draw(this.gfx);
+    for (var ni = 0; ni < this.enemies.length; ni++) {
+      this.enemies[ni].draw(this.gfx);
+    }
+
+    this.gfx.restore();
+  }
 };
 
 SmallGame.prototype.updateGravity = function() {
@@ -204,6 +275,12 @@ SmallGame.prototype.onImpact = function(event) {
     }
     this.world.removeBody(enemy.body);
     this.enemies.splice(enemyIndex, 1);
+    this.score += 100;
+    this.scoreText.textContent = this.score;
+    if (this.enemies.length === 0) {
+      this.wave += 2;
+      this.spawnEnemies();
+    }
   }
 };
 

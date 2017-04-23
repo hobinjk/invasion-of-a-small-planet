@@ -19,7 +19,8 @@ function Enemy(game, world, r, theta) {
   this.angleSpeed = 0.0003;
   this.lastUpdate = Date.now();
   this.lastFire = Date.now();
-  this.fireDelay = 1000;
+  this.fireDelay = 5000;
+  this.fireStart = 16;
 
   this.body = new p2.Body({
     position: [this.getX(), this.getY()],
@@ -77,7 +78,7 @@ Enemy.prototype.update = function() {
     this.remaining = 1500;
   }
 
-  if (this.lastFire + this.fireDelay < Date.now()) {
+  if (this.r < this.fireStart && this.lastFire + this.fireDelay < Date.now()) {
     this.fire();
     this.lastFire = Date.now();
   }
@@ -99,6 +100,18 @@ Enemy.prototype.draw = function(gfx) {
   gfx.lineTo(-this.width / 2, this.height / 2);
   gfx.lineTo(-this.width / 2, -this.height / 2);
   gfx.stroke();
+
+  var firing = Math.floor(Math.min((Date.now() - this.lastFire) / this.fireDelay, 1) * 15);
+  if (this.r > this.fireStart) {
+    firing = 0;
+  }
+  gfx.beginPath();
+  gfx.strokeStyle = '#' + firing.toString(16) + '00';
+  gfx.moveTo(this.width / 4, this.height / 4);
+  gfx.lineTo(0, this.height / 2);
+  gfx.lineTo(-this.width / 4, this.height / 4);
+  gfx.stroke();
+
   gfx.restore();
 }
 
