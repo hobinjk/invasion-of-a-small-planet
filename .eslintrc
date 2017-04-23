@@ -12,9 +12,11 @@
     "BULLET": true,
     "ENEMY": true,
     "Enemy": true,
+    "Explosion": true,
     "Planet": true,
     "Bullet": true,
-    "p2": true
+    "p2": true,
+    "strokeCircle": true
   },
   "rules": {
     "no-console": ["off"]

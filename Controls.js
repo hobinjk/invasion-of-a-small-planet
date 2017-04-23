@@ -24,14 +24,22 @@ Controls.prototype.onKeyDown = function(event) {
   if (event.key === ' ' || event.keyCode == 32) {
     this.player.fire();
   }
+
+  if (event.key === 'e' || event.keyCode === 69) {
+    this.player.flip(100);
+  }
+
+  if (event.key === 'q' || event.keyCode === 81) {
+    this.player.flip(-100);
+  }
 };
 
 Controls.prototype.update = function() {
   var impulse = 0;
   if (this.right) {
-    impulse = -10; // Math.min((Date.now() - this.right) / 50, 10);
+    impulse = 3;
   } else if (this.left) {
-    impulse = 10; //Math.min((Date.now() - this.left) / 50, 10);
+    impulse = -3;
   }
   this.player.setMotor(impulse);
 };

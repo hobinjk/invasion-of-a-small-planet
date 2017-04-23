@@ -18,22 +18,36 @@ function SmallGame() {
     broadphase: new p2.SAPBroadphase()
   });
 
+  this.onImpact = this.onImpact.bind(this);
+  this.world.on('impact', this.onImpact);
+
   this.world.defaultContactMaterial.friction = 5;
 
+  this.effects = [];
 
   this.planet = new Planet(this.world);
   this.player = new Player(this, this.world, this.planet);
 
   this.bullets = [];
-  this.enemies = new Array(10);
+  this.enemies = new Array(9);
   for (var i = 0; i < this.enemies.length; i++) {
-    this.enemies[i] = new Enemy(this.world, 10, i / this.enemies.length * 2 * Math.PI);
+    this.enemies[i] = new Enemy(this, this.world, 10, i / this.enemies.length * 2 * Math.PI);
   }
 
   this.lastUpdate = Date.now();
   this.update = this.update.bind(this);
 
-  this.controls = new Controls(this.player);
+  this.stars = new Array(128);
+  for (var si = 0; si < this.stars.length; si++) {
+    var theta = Math.random() * 2 * Math.PI;
+    var r = Math.random() * 24 + 4;
+    this.stars[si] = {
+      x: Math.cos(theta) * r,
+      y: Math.sin(theta) * r
+    };
+  }
+
+ this.controls = new Controls(this.player);
 
   this.onResize = this.onResize.bind(this);
   window.addEventListener('resize', this.onResize);
@@ -50,13 +64,34 @@ SmallGame.prototype.update = function() {
   for (var i = 0; i < this.enemies.length; i++) {
     this.enemies[i].update();
   }
+  var screenRSq = this.width * this.width + this.height * this.height;
+  screenRSq /= this.scale * this.scale * 4;
+
+  for (var bi = this.bullets.length - 1; bi >= 0; bi--) {
+    var bullet = this.bullets[bi];
+    var dx = this.player.getX() - bullet.getX();
+    var dy = this.player.getY() - bullet.getY();
+
+    if (dx * dx + dy * dy > screenRSq) {
+      this.world.removeBody(bullet.body);
+      this.bullets.splice(bi, 1);
+    }
+  }
+
+  for (var ei = this.effects.length - 1; ei >= 0; ei--) {
+    var effect = this.effects[ei];
+    effect.update();
+    if (!effect.alive) {
+      this.effects.splice(ei, 1);
+    }
+  }
 
   this.updateGravity();
   this.world.step(1/60, Math.min(dt / 1000, 0.5));
 
   this.draw();
 
-  this.lastUpdate = Date.now();;
+  this.lastUpdate = Date.now();
   window.requestAnimationFrame(this.update);
 };
 
@@ -68,14 +103,34 @@ SmallGame.prototype.draw = function() {
   this.scale = 60;
   this.gfx.scale(this.scale, this.scale);
   this.gfx.rotate(-this.theta + Math.PI / 2);
+
+  this.gfx.lineWidth = 0.025;
+  for (var si = 0; si < this.stars.length; si++) {
+    var x = this.stars[si].x;
+    var y = this.stars[si].y;
+
+    var c = Math.floor(Math.random() * 5 + 10).toString(16);
+    this.gfx.strokeStyle = '#' + c + c + c;
+    this.gfx.beginPath();
+    this.gfx.moveTo(x - 0.1, y);
+    this.gfx.lineTo(x + 0.1, y);
+    this.gfx.moveTo(x, y - 0.1);
+    this.gfx.lineTo(x, y + 0.1);
+    this.gfx.stroke();
+  }
+
   this.planet.draw(this.gfx);
   this.player.draw(this.gfx);
   for (var i = 0; i < this.enemies.length; i++) {
     this.enemies[i].draw(this.gfx);
   }
 
-  for (var i = 0; i < this.bullets.length; i++) {
-    this.bullets[i].draw(this.gfx);
+  for (var bi = 0; bi < this.bullets.length; bi++) {
+    this.bullets[bi].draw(this.gfx);
+  }
+  for (var ei = 0; ei < this.effects.length; ei++) {
+    var effect = this.effects[ei];
+    effect.draw(this.gfx);
   }
   this.gfx.restore();
 };
@@ -85,9 +140,10 @@ SmallGame.prototype.updateGravity = function() {
   this.theta = Math.atan2(this.planet.getY() - this.player.getY(),
     this.planet.getX() - this.player.getX());
 
-  this.world.gravity[0] = 5 * Math.cos(this.theta);
-  this.world.gravity[1] = 5 * Math.sin(this.theta);
-}
+  var gravity = 5 * this.planet.mass / this.planet.initialMass;
+  this.world.gravity[0] = gravity * Math.cos(this.theta);
+  this.world.gravity[1] = gravity * Math.sin(this.theta);
+};
 
 SmallGame.prototype.onResize = function() {
   var width = window.innerWidth;
@@ -98,6 +154,57 @@ SmallGame.prototype.onResize = function() {
   this.canvas.height = this.height = height * dpr;
   this.canvas.style.width = width + 'px';
   this.canvas.style.height = height + 'px';
-}
+};
 
-var game = new SmallGame();
+SmallGame.prototype.onImpact = function(event) {
+  var bulletBody = null;
+  var hitBody = null;
+  if (event.bodyA.shapes[0].collisionGroup === BULLET) {
+    bulletBody = event.bodyA;
+    hitBody = event.bodyB;
+  } else if (event.bodyB.shapes[0].collisionGroup === BULLET) {
+    bulletBody = event.bodyB;
+    hitBody = event.bodyA;
+  } else {
+    return;
+  }
+
+  var bullet = null;
+  var bulletIndex = -1;
+  for (var i = 0; i < this.bullets.length; i++) {
+    if (this.bullets[i].body === bulletBody) {
+      bullet = this.bullets[i];
+      bulletIndex = i;
+      break;
+    }
+  }
+  if (!bullet) {
+    return;
+  }
+  this.effects.push(new Explosion(bullet.getX(), bullet.getY()));
+  this.world.removeBody(bullet.body);
+  this.bullets.splice(bulletIndex, 1);
+
+  if (hitBody.shapes[0].collisionGroup === PLAYER) {
+    this.player.onHit(bullet);
+  } else if (hitBody.shapes[0].collisionGroup === PLANET) {
+    this.planet.onHit(bullet);
+  } else if (hitBody.shapes[0].collisionGroup === ENEMY) {
+    var enemy = null;
+    var enemyIndex = -1;
+    for (var ei = 0; ei < this.enemies.length; ei++) {
+      if (this.enemies[ei].body === hitBody) {
+        enemy = this.enemies[ei];
+        enemyIndex = ei;
+        break;
+      }
+    }
+    if (!enemy) {
+      return;
+    }
+    this.world.removeBody(enemy.body);
+    this.enemies.splice(enemyIndex, 1);
+  }
+};
+
+window.game = new SmallGame();
